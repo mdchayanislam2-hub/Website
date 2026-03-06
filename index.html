@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আমার স্ট্রিমিং প্ল্যাটফর্ম</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; text-align: center; }
+        .upload-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; }
+        .btn { width: 95%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .gallery { margin-top: 25px; }
+        .item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        img, video { width: 100%; border-radius: 8px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="upload-card">
+        <h3>অনলাইনে আপলোড করুন</h3>
+        <input type="text" id="fileTitle" placeholder="শিরোনাম লিখুন">
+        
+        <input type="file" id="fileChooser" accept="image/*,video/*">
+        
+        <button class="btn" onclick="startUpload()">সেভ এবং আপলোড করুন</button>
+    </div>
+
+    <div id="gallery" class="gallery"></div>
+
+    <script>
+        // আপনার নিজের Firebase লিঙ্কটি এখানে বসাবেন [cite: 2026-02-26]
+        const DB_URL = "https://your-database-id.firebaseio.com/myfiles.json";
+
+        async function startUpload() {
+            const title = document.getElementById('fileTitle').value;
+            const file = document.getElementById('fileChooser').files[0];
+
+            if (!title || !file) {
+                alert("দয়া করে নাম এবং ফাইল সিলেক্ট করুন!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async function () {
+                const base64Data = reader.result;
+
+                // ইন্টারনেটে সেভ করা হচ্ছে
+                await fetch(DB_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ title: title, url: base64Data })
+                });
+
+                alert("সফলভাবে ইন্টারনেটে সেভ হয়েছে!");
+                loadContent(); 
+            };
+        }
+
+        async function loadContent() {
+            const gallery = document.getElementById('gallery');
+            try {
+                const res = await fetch(DB_URL);
+                const data = await res.json();
+                gallery.innerHTML = '';
+                
+                for (let id in data) {
+                    const item = data[id];
+                    const isVideo = item.url.includes("video");
+                    gallery.innerHTML += `
+                        <div class="item">
+                            <strong>${item.title}</strong>
+                            ${isVideo ? `<video controls src="${item.url}"></video>` : `<img src="${item.url}">`}
+                            <button onclick="deleteData('${id}')" style="margin-top:10px; background:red; color:white; border:none; padding:5px 10px; border-radius:4px;">ডিলিট</button>
+                        </div>`;
+                }
+            } catch (e) { console.log("ডাটা লোড হচ্ছে না"); }
+        }
+
+        async function deleteData(id) {
+            if(confirm("আপনি কি এটি ডিলিট করতে চান?")) {
+                const deleteUrl = `https://your-database-id.firebaseio.com/myfiles/${id}.json`;
+                await fetch(deleteUrl, { method: 'DELETE' });
+                loadContent();
+            }
+        }
+
+        window.onload = loadContent;
+    </script>
+</body>
+  </html>
+  
